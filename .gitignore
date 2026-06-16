@@ -141,3 +141,22 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Archivos temporales de Orión
+orion-log.txt
+tmp-audio.wav
+tmp-output.wav
+tmp-*.wav
+
+# Ollama (modelos no suben)
+models/
