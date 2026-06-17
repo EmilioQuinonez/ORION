@@ -161,10 +161,9 @@ orion/
 ├── docs/
 │   ├── 01-VISION.md
 │   ├── 02-SRS.md
-│   ├── 03-ALCANCE.md
-│   ├── 04-ARQUITECTURA.md
-│   ├── 05-PLAN-CALIDAD.md
-│   └── 06-SETUP.md
+│   ├── 03-ARQUITECTURA.md
+│   ├── 04-PLAN-CALIDAD.md
+│   └── 05-SETUP.md
 │
 ├── package.json
 ├── tsconfig.json
