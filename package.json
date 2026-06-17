@@ -1,0 +1,104 @@
+{
+    "name": "orion",
+    "version": "0.1.0",
+    "description": "Personal AI voice assistant with privacy focus",
+    "author": "Tu nombre",
+    "license": "MIT",
+    "private": true,
+    "main": "dist/src/index.js",
+    "type": "module",
+    "scripts": {
+        "dev": "ts-node --esm src/index.ts",
+        "dev:watch": "nodemon --exec ts-node --esm src/index.ts",
+        "build": "tsc",
+        "start": "node dist/src/index.js",
+        "test": "jest",
+        "test:unit": "jest --testPathPattern=unit",
+        "test:integration": "jest --testPathPattern=integration",
+        "test:e2e": "jest --testPathPattern=e2e",
+        "test:watch": "jest --watch",
+        "test:coverage": "jest --coverage",
+        "test:security": "jest --testPathPattern=security",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix",
+        "format": "prettier --write src",
+        "type-check": "tsc --noEmit",
+        "db:migrate": "prisma migrate dev",
+        "db:studio": "prisma studio",
+        "db:reset": "prisma migrate reset",
+        "db:seed": "ts-node --esm prisma/seed.ts",
+        "prisma:generate": "prisma generate",
+        "ollama:start": "ollama serve",
+        "list-devices": "ts-node --esm scripts/listAudioDevices.ts",
+        "setup": "npm install && npm run prisma:generate && npm run db:migrate",
+        "clean": "rm -rf dist node_modules .prisma",
+        "check": "npm run type-check && npm run lint && npm run test:coverage",
+        "prestart": "npm run build"
+    },
+    "dependencies": {
+        "@anthropic-ai/sdk": "^0.28.0",
+        "@prisma/client": "^6.0.0",
+        "axios": "^1.7.7",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "kokoro-js": "^1.1.0",
+        "multer": "^1.4.5-lts.1",
+        "node-record-lpcm16": "^1.0.1",
+        "nodejs-whisper": "^0.3.0",
+        "pino": "^9.2.0",
+        "pino-pretty": "^11.2.1",
+        "uuid": "^11.1.0"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.22",
+        "@types/jest": "^29.5.12",
+        "@types/multer": "^1.4.12",
+        "@types/node": "^22.5.5",
+        "@types/supertest": "^2.0.12",
+        "@typescript-eslint/eslint-plugin": "^8.6.0",
+        "@typescript-eslint/parser": "^8.6.0",
+        "eslint": "^9.14.0",
+        "jest": "^30.4.2",
+        "nodemon": "^3.1.7",
+        "prettier": "^3.3.3",
+        "prisma": "^6.0.0",
+        "supertest": "^7.0.0",
+        "ts-jest": "^29.4.11",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.6.3"
+    },
+    "engines": {
+        "node": ">=18.0.0",
+        "npm": ">=10.0.0"
+    },
+    "keywords": [
+        "ai",
+        "voice",
+        "assistant",
+        "privacy",
+        "local",
+        "personal",
+        "typescript",
+        "free",
+        "open-source",
+        "kokoro"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/EmilioQuinonez/orion.git"
+    },
+    "nodemonConfig": {
+        "watch": [
+            "src"
+        ],
+        "ext": "ts",
+        "ignore": [
+            "src/**/*.test.ts"
+        ],
+        "execMap": {
+            "ts": "ts-node --esm"
+        }
+    }
+}
