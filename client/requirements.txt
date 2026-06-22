@@ -1,0 +1,8 @@
+vosk
+faster-whisper
+kokoro
+sounddevice
+requests
+python-dotenv
+numpy
+webrtcvad
