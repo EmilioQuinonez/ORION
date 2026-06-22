@@ -14,19 +14,20 @@
 │              USUARIO FINAL                          │
 │    (Habla al micrófono, escucha respuesta)          │
 └──────────────────────┬──────────────────────────────┘
-                       │ Audio / HTTP
+                       │ Audio PCM 16kHz
                        ↓
 ┌─────────────────────────────────────────────────────┐
-│         FRONTEND (React + TypeScript)               │
-│   - Interfaz visual (MVP 2)                         │
-│   - Control de micrófono                            │
-│   - Mostrar respuestas                              │
+│         CLIENTE PYTHON (client/orion_client.py)     │
+│   - WebRTC VAD  → detecta voz real                  │
+│   - Vosk        → detecta wake word "Orión"         │
+│   - faster-whisper → transcribe el comando          │
+│   - Kokoro TTS  → sintetiza la respuesta            │
 └──────────────────────┬──────────────────────────────┘
-                       │ REST API
+                       │ POST /api/voice/chat { text }
                        ↓
 ┌──────────────────────────────────────────────────────┐
 │       ROUTER (Express)                               │
-│   - POST /api/voiceProcess                           │
+│   - POST /api/voice/chat                             │
 │   - GET /api/history                                 │
 │   - GET /api/settings                                │
 └────────────┬─────────────────────────────────────────┘
@@ -49,9 +50,9 @@
              │
     ┌────────▼──────────┐
     │     SERVICE       │
-    │ - voiceService    │
     │ - llmService      │
     │ - commandService  │
+    │ - securityService │
     │ - memoryService   │
     └────────┬──────────┘
              │
@@ -77,27 +78,31 @@
 ```
 orion/
 │
+├── client/                           # Cliente de voz Python
+│   ├── orion_client.py               # Pipeline completo: VAD + wake word + STT + TTS
+│   ├── requirements.txt              # Dependencias Python
+│   └── models/                       # Modelos descargados automáticamente (git-ignored)
+│       └── vosk-model-small-es-0.42/
+│
 ├── src/
-│   ├── index.js                      # Express server (punto de entrada)
+│   ├── index.ts                      # Express server (punto de entrada)
 │   │
-│   ├── router/
-│   │   ├── voiceRouter.ts            # POST /api/voiceProcess
+│   ├── routes/
+│   │   ├── voiceRouter.ts            # POST /api/voice/chat
 │   │   ├── historyRouter.ts          # GET /api/history
 │   │   ├── settingsRouter.ts         # GET/PATCH /api/settings
 │   │   ├── healthRouter.ts           # GET /api/health
 │   │   └── index.ts                  # Agregador de rutas
 │   │
 │   ├── controller/
-│   │   ├── voiceController.ts        # Procesa requests de voz
+│   │   ├── voiceController.ts        # Recibe texto, orquesta LLM + comandos
 │   │   ├── historyController.ts      # Gestiona historial
 │   │   ├── settingsController.ts     # Configuración
-│   │   ├── healthController.ts       # Health check
-│   │   └── index.ts                  # Exporta todos
+│   │   └── healthController.ts       # Health check
 │   │
 │   ├── service/
-│   │   ├── voiceService.ts           # STT (Whisper) + TTS (Kokoro.js)
-│   │   ├── llmService.ts             # Ollama + Intent detection
-│   │   ├── commandService.ts         # Ejecución de comandos
+│   │   ├── llmService.ts             # Ollama + detección de intención
+│   │   ├── commandService.ts         # Ejecución de comandos del sistema
 │   │   ├── memoryService.ts          # Gestión de memoria (MVP 4)
 │   │   ├── securityService.ts        # Validación de seguridad
 │   │   └── index.ts                  # Exporta todos
@@ -215,13 +220,13 @@ health.router.ts
 
 ```
 voice.controller.ts
-├── processVoice(req, res)
-│   ├─ Extrae audio de request
-│   ├─ Valida básicamente
-│   ├─ Delega a voiceService.transcribe()
-│   ├─ Delega a llmService.process()
-│   ├─ Delega a voiceService.synthesize()
-│   └─ Responde con JSON
+├── chat(req, res)
+│   ├─ Extrae texto del body
+│   ├─ Valida que no esté vacío
+│   ├─ Delega a llmService.detectIntent()
+│   ├─ Delega a commandService.execute()
+│   ├─ Delega a llmService.generateResponse()
+│   └─ Responde con JSON { response, action, actionResult }
 │
 history.controller.ts
 ├── getHistory(req, res)
@@ -244,17 +249,6 @@ history.controller.ts
 **Responsabilidad:** Lógica de negocio pura
 
 ```
-voice.service.ts
-├── transcribe(audioBuffer)
-│   ├─ Llama Whisper local
-│   ├─ Valida resultado
-│   └─ Retorna texto
-│
-├── synthesize(text)
-│   ├─ Llama Kokoro.js local
-│   ├─ Maneja error si falla
-│   └─ Retorna Buffer audio
-
 llm.service.ts
 ├── detectIntent(text)
 │   ├─ Llama Ollama HTTP API
@@ -462,70 +456,60 @@ constants.ts
 
 ## 4. Flujo de Procesamiento Completo
 
-### MVP 1 (Sin Frontend, sin Zod)
+### MVP 1
 
 ```
-1. HTTP REQUEST
-   POST /api/voice/process
-   Body: { audio: Buffer }
+1. CLIENTE PYTHON
+   Micrófono → WebRTC VAD → ¿hay voz?
+   ├─ Vosk (vocabulario completo) → detecta "orion" en texto parcial
+   ├─ faster-whisper → "abre Apple Music"
+   └─ POST /api/voice/chat  { text: "abre Apple Music" }
 
 2. ROUTER
-   voice.router.ts detecta POST
-   Aplica middlewares: [logger, validator]
+   voice.router.ts detecta POST /chat
+   Aplica middlewares: [logger, error]
 
 3. MIDDLEWARE
    logger.ts:   registra request
-   validator.ts: valida que audio existe
    error.ts:    atrapa cualquier error
 
 4. CONTROLLER
-   voice.controller.processVoice(req, res)
-   ├─ Extrae audio
-   ├─ Valida manualmente
-   └─ Delega a servicios
+   voice.controller.chat(req, res)
+   ├─ Extrae texto del body
+   ├─ Valida que no esté vacío
+   └─ Delega a processTranscript()
 
 5. SERVICES (Orquestación)
-   ├─ voiceService.transcribe(audio)
-   │  └─ Llama Whisper → "abre Apple Music"
-   │
-   ├─ llmService.detectIntent(transcript)
+   ├─ llmService.detectIntent(text)
    │  └─ Llama Ollama → { action: "open_app", params: {app: "Apple Music"} }
    │
-   ├─ securityService.isCommandWhitelisted()
-   │  └─ Valida contra políticas → true
+   ├─ securityService.isCommandAllowed()
+   │  └─ Valida contra whitelist → true
    │
    ├─ commandService.execute()
-   │  └─ Ejecuta command → "Apple Music abierto"
+   │  └─ Ejecuta acción → "Apple Music abierto"
    │
-   ├─ llmService.generateResponse()
-   │  └─ Llama Ollama → "Abierto Apple Music para ti"
-   │
-   └─ voiceService.synthesize()
-      └─ Llama Kokoro.js → Audio Buffer
+   └─ llmService.generateResponse()
+      └─ Llama Ollama → "Abriendo Apple Music para ti"
 
 6. MODELS (Persistencia)
-   messageModel.create({
-     userId: "user1",
-     role: "user",
-     content: "abre Apple Music"
-   })
+   messageModel.create() × 2 (user + assistant)
    → Prisma → PostgreSQL
 
 7. RESPONSE
    res.json({
      transcript: "abre Apple Music",
-     response: "Abierto Apple Music para ti",
-     audioUrl: "data:audio/wav;base64,..."
+     response: "Abriendo Apple Music para ti",
+     action: "open_app",
+     actionResult: "Apple Music abierto"
    })
 
-8. MIDDLEWARE (Error Handler)
-   Si hay error en cualquier paso:
-   ├─ error.ts atrapa excepción
-   ├─ Formatea respuesta
-   └─ Retorna HTTP 400/500
+8. CLIENTE PYTHON
+   Recibe JSON → Kokoro TTS → sounddevice reproduce
+
 ```
 
-**Tiempo Total:** ~5-8 segundos
+**Tiempo Total:** ~4-8 segundos
 
 ---
 
@@ -558,11 +542,13 @@ Mismo flujo PERO con:
 - **Prisma** - ORM + migrations
 - **PostgreSQL** - Database
 
-### Voice Intelligence (Locales)
+### Voice Intelligence (Cliente Python — Locales)
 
-- **Whisper** (via `node-whisper`) - STT
-- **Ollama** (localhost:11434) - LLM
-- **Kokoro.js** - TTS
+- **WebRTC VAD** (`webrtcvad`) - Detección de voz
+- **Vosk** (modelo español 45MB) - Wake word "Orión"
+- **faster-whisper** - STT (transcripción)
+- **Kokoro** (voz ef_dora) - TTS
+- **Ollama** (localhost:11434) - LLM local
 
 ### Testing
 
