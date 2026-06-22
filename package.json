@@ -8,17 +8,19 @@
     "main": "dist/src/index.js",
     "type": "module",
     "scripts": {
-        "dev": "ts-node --esm src/index.ts",
-        "dev:watch": "nodemon --exec ts-node --esm src/index.ts",
+        "client": "client/.venv/bin/python3 client/orion_client.py",
+        "client:setup": "client/.venv/bin/pip install -r client/requirements.txt",
+        "dev": "tsx src/index.ts",
+        "dev:watch": "nodemon --exec tsx src/index.ts",
         "build": "tsc",
         "start": "node dist/src/index.js",
-        "test": "jest",
-        "test:unit": "jest --testPathPattern=unit",
-        "test:integration": "jest --testPathPattern=integration",
-        "test:e2e": "jest --testPathPattern=e2e",
-        "test:watch": "jest --watch",
-        "test:coverage": "jest --coverage",
-        "test:security": "jest --testPathPattern=security",
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs",
+        "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --testPathPatterns=unit",
+        "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --testPathPatterns=integration",
+        "test:e2e": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --testPathPatterns=e2e",
+        "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --watch",
+        "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --coverage",
+        "test:security": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs --testPathPatterns=security",
         "lint": "eslint src --ext .ts",
         "lint:fix": "eslint src --ext .ts --fix",
         "format": "prettier --write src",
@@ -26,10 +28,10 @@
         "db:migrate": "prisma migrate dev",
         "db:studio": "prisma studio",
         "db:reset": "prisma migrate reset",
-        "db:seed": "ts-node --esm prisma/seed.ts",
+        "db:seed": "tsx prisma/seed.ts",
         "prisma:generate": "prisma generate",
         "ollama:start": "ollama serve",
-        "list-devices": "ts-node --esm scripts/listAudioDevices.ts",
+        "list-devices": "tsx scripts/listAudioDevices.ts",
         "setup": "npm install && npm run prisma:generate && npm run db:migrate",
         "clean": "rm -rf dist node_modules .prisma",
         "check": "npm run type-check && npm run lint && npm run test:coverage",
@@ -42,10 +44,6 @@
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",
-        "kokoro-js": "^1.1.0",
-        "multer": "^1.4.5-lts.1",
-        "node-record-lpcm16": "^1.0.1",
-        "nodejs-whisper": "^0.3.0",
         "pino": "^9.2.0",
         "pino-pretty": "^11.2.1",
         "uuid": "^11.1.0"
@@ -54,7 +52,6 @@
         "@types/cors": "^2.8.17",
         "@types/express": "^4.17.22",
         "@types/jest": "^29.5.12",
-        "@types/multer": "^1.4.12",
         "@types/node": "^22.5.5",
         "@types/supertest": "^2.0.12",
         "@typescript-eslint/eslint-plugin": "^8.6.0",
@@ -67,6 +64,7 @@
         "supertest": "^7.0.0",
         "ts-jest": "^29.4.11",
         "ts-node": "^10.9.2",
+        "tsx": "^4.22.4",
         "typescript": "^5.6.3"
     },
     "engines": {
@@ -98,7 +96,7 @@
             "src/**/*.test.ts"
         ],
         "execMap": {
-            "ts": "ts-node --esm"
+            "ts": "tsx"
         }
     }
 }
