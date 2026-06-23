@@ -1,9 +1,9 @@
 # SRS - Especificación de Requisitos de Software
 
 **Proyecto:** Orión - Asistente de Voz Local  
-**Versión:** 1.0  
+**Versión:** 1.1  
 **Fecha:** Junio 2026  
-**Estado:** Aprobado para MVP 1
+**Estado:** MVP 1 completado
 
 ---
 
@@ -35,16 +35,37 @@ Este documento cubre MVP 1-3 (primeras 8 semanas de desarrollo). MVPs posteriore
 
 **Requisitos:**
 
-- Capturar a 16kHz, mono, PCM
+- Capturar a 16kHz, mono, PCM 16-bit
 - Soporte múltiples dispositivos de entrada
-- Detección automática de silencio
-- Timeout 30 segundos máximo
+- Detección automática de silencio con WebRTC VAD (modo 0-3)
+- Pre-roll de 400ms para no perder fonemas iniciales
+- Timeout 30 segundos máximo por comando; 30s en modo conversación
 
 **Criterios de Aceptación:**
 
-- [ ] Audio se captura sin ruido excesivo
-- [ ] Sistema detecta cuando para de hablar
+- [x] Audio se captura sin ruido excesivo
+- [x] Sistema detecta cuando para de hablar
 - [ ] Maneja error si micrófono desconectado
+
+---
+
+### RF-001b: Detección de Wake Word (Vosk)
+
+**Descripción:** El sistema debe escuchar pasivamente y activarse solo al detectar "Orión"
+
+**Requisitos:**
+
+- Usar Vosk con modelo español (`vosk-model-small-es-0.42`)
+- Vocabulario completo (sin gramática restringida) para mayor precisión
+- Variantes aceptadas: "orión", "orion", "orin", "aurión", "o rion"
+- Modo conversación: permanece activo 30s después de la primera interacción
+- Palabras de salida: "bye", "adiós", "hasta luego", "salir"
+
+**Criterios de Aceptación:**
+
+- [x] Activa con "Orión" en condiciones normales
+- [x] Permanece en modo conversación tras el primer comando
+- [x] Se desactiva con palabra de salida
 
 ---
 
@@ -54,54 +75,57 @@ Este documento cubre MVP 1-3 (primeras 8 semanas de desarrollo). MVPs posteriore
 
 **Requisitos:**
 
-- Usar `node-whisper` (TypeScript)
-- Soporte español + inglés
+- Usar `faster-whisper` (Python) con modelo configurable (`small` por defecto)
+- Cómputo en CPU con cuantización `int8`
+- Soporte español (forzado)
 - Precisión ≥ 95% en español
 - Latencia < 3 segundos
 
 **Criterios de Aceptación:**
 
-- [ ] Transcribe correctamente "abre Apple Music"
-- [ ] Detecta idioma automáticamente
-- [ ] Maneja acentos y variantes españolas
+- [x] Transcribe correctamente "abre Apple Music"
+- [x] Maneja acentos y variantes españolas
+- [ ] Detecta idioma automáticamente (actualmente forzado a español)
 
 ---
 
 ### RF-003: Procesamiento con LLM (Ollama)
 
-**Descripción:** Procesar comando con Qwen 3.5 9B via Ollama
+**Descripción:** Procesar comando con LLM local via Ollama
 
 **Requisitos:**
 
-- Conectar a Ollama localhost:11434
-- Modelo: Qwen 3.5 9B
-- System prompt en español
-- Context awareness básico
+- Conectar a Ollama `localhost:11434`
+- Modelo configurable via `.env` (`OLLAMA_MODEL`)
+- Detección de intención → JSON `{ action, params }`
+- Generación de respuesta natural en español
+- Context window de 10 mensajes anteriores
 
 **Criterios de Aceptación:**
 
-- [ ] Responde preguntas naturalmente
-- [ ] Entiende intención de comandos
-- [ ] Latencia < 2s (GPU) o < 5s (CPU)
+- [x] Responde preguntas naturalmente
+- [x] Entiende intención de comandos
+- [x] Latencia < 2s (GPU) o < 5s (CPU)
 
 ---
 
-### RF-004: Síntesis de Voz (Kokoro.js)
+### RF-004: Síntesis de Voz (Kokoro)
 
 **Descripción:** Convertir respuesta a audio reproducible
 
 **Requisitos:**
 
-- Usar `kokoro-js` (TypeScript)
-- Voces en español disponibles
-- Reproducción automática en parlantes
-- Calidad aceptable para conversación
+- Usar `kokoro` (Python) con `KPipeline`
+- Voz configurable via `.env` (`KOKORO_PY_VOICE`, default `ef_dora`)
+- Velocidad configurable (`KOKORO_SPEED`)
+- Reproducción automática en parlantes a 24kHz
+- Normalización de audio con `sox` si disponible
 
 **Criterios de Aceptación:**
 
-- [ ] Genera audio desde texto
-- [ ] Se reproduce sin lag
-- [ ] Audible y comprensible
+- [x] Genera audio desde texto
+- [x] Se reproduce sin lag
+- [x] Audible y comprensible
 
 ---
 
@@ -111,24 +135,24 @@ Este documento cubre MVP 1-3 (primeras 8 semanas de desarrollo). MVPs posteriore
 
 **Requisitos:**
 
-- Abrir aplicaciones (Apple Music, Chrome, etc)
-- Ejecutar comandos del sistema
-- Búsqueda en internet
-- Reproducción de música
+- 22 acciones implementadas: abrir apps, volumen, captura de pantalla, búsqueda web, YouTube, fecha/hora, batería, bloquear pantalla, música
+- Ejecutar comandos del sistema via `execFile` (nunca `exec` para evitar injection)
+- Búsqueda en internet y apertura de URLs
 
 **Requisitos Seguridad:**
 
 - Validar comando antes de ejecutar
-- Whitelist de comandos permitidos
+- Whitelist estática en `commandWhitelist.ts`
+- Sanitización de parámetros con `sanitizeParam` antes de ejecución
 - No ejecutar comandos peligrosos (rm -rf)
-- Auditar cada ejecución
+- Auditar cada ejecución en log
 
 **Criterios de Aceptación:**
 
-- [ ] "abre Apple Music" abre Apple Music
-- [ ] "reproduce música" funciona
-- [ ] Comandos peligrosos rechazados
-- [ ] Log de acciones completo
+- [x] "abre Apple Music" abre Apple Music
+- [x] "reproduce música" funciona
+- [x] Comandos peligrosos rechazados
+- [x] Log de acciones completo
 
 ---
 
@@ -145,9 +169,9 @@ Este documento cubre MVP 1-3 (primeras 8 semanas de desarrollo). MVPs posteriore
 
 **Criterios de Aceptación:**
 
-- [ ] Datos persisten entre sesiones
-- [ ] Historial consultable
-- [ ] BD privada en disco local
+- [x] Datos persisten entre sesiones
+- [x] Historial consultable
+- [x] BD privada en disco local
 
 ---
 
@@ -245,7 +269,7 @@ Tiempo máx      | 300s  | 300s | 60s
 
 ### RNF-004: Privacidad
 
-- 100% offline (Whisper, Ollama, Kokoro.js local)
+- 100% offline (faster-whisper, Ollama, Kokoro local)
 - BD en disco local (PostgreSQL)
 - Datos NUNCA a terceros sin consentimiento
 - Fallback a Claude API es OPCIONAL
@@ -279,11 +303,12 @@ Tiempo máx      | 300s  | 300s | 60s
 
 **Declaración:** MVP 1-3 completamente gratis
 
-- Whisper: Gratis (OpenAI)
+- faster-whisper: Gratis (open source)
 - Ollama: Gratis (open source)
-- Kokoro.js: Gratis (open source)
+- Kokoro: Gratis (open source)
+- Vosk: Gratis (open source)
 - PostgreSQL: Gratis
-- Node.js: Gratis
+- Node.js / Python: Gratis
 
 ### RB-003: Whitelist de Comandos
 
@@ -361,12 +386,13 @@ Apple Music se abre
 #### Endpoints REST
 
 ```
-POST   /api/voiceProcess       - Procesar comando
-GET    /api/voiceStatus        - Estado actual
-GET    /api/history            - Historial
-GET    /api/settings           - Configuración
-PATCH  /api/settings           - Actualizar config
-GET    /api/health             - Health check
+POST   /api/voice/chat         - Procesar transcripción y ejecutar comando
+GET    /api/history            - Historial paginado
+DELETE /api/history/clear      - Limpiar todo el historial
+DELETE /api/history/:id        - Eliminar mensaje específico
+GET    /api/settings           - Obtener configuración
+PATCH  /api/settings           - Actualizar configuración
+GET    /api/health             - Health check (servidor + Ollama)
 ```
 
 #### WebSocket (Futuro MVP 2)
@@ -384,15 +410,15 @@ WS /ws
 
 ```
 users
-├─ id, name, role, voice_profile
+├─ id, name, role, voice_profile, created_at
 
 messages
-├─ id, user_id, role, content, timestamp
+├─ id, user_id, role, content, action, created_at
 
 settings
-├─ user_id, language, volume, timeout
+├─ id, user_id, language, volume, timeout
 
-memory
+memory (MVP 4)
 ├─ user_id, category, content, confidence
 ```
 
@@ -431,13 +457,13 @@ CONFIGURACIÓN
 
 ## 8. Criterios de Aceptación por MVP
 
-### MVP 1: Backend Base
+### MVP 1: Backend Base ✅
 
-- [ ] Puedo hablar y escucho respuesta
-- [ ] Ejecuta 20+ comandos simples
-- [ ] Funciona offline (sin internet)
-- [ ] BD guarda historial
-- [ ] 80%+ tests pasando
+- [x] Puedo hablar y escucho respuesta
+- [x] Ejecuta 20+ comandos simples (22 implementados)
+- [x] Funciona offline (Vosk, Whisper, Ollama, Kokoro locales)
+- [x] BD guarda historial
+- [x] 80%+ tests pasando (40/40, 100%)
 
 ### MVP 2: Voz Completa
 
