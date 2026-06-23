@@ -9,6 +9,16 @@ describe('securityService', () => {
       expect(securityService.isCommandAllowed({ action: 'general_question', params: {} })).toBe(true);
     });
 
+    it('debe permitir las nuevas acciones de música', () => {
+      expect(securityService.isCommandAllowed({ action: 'stop_music', params: {} })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'get_current_track', params: {} })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'next_track', params: {} })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'previous_track', params: {} })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'play_song', params: { song: 'Bohemian Rhapsody' } })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'play_artist', params: { artist: 'Queen' } })).toBe(true);
+      expect(securityService.isCommandAllowed({ action: 'play_playlist', params: { playlist: 'Favoritas' } })).toBe(true);
+    });
+
     it('debe rechazar acciones no reconocidas', () => {
       expect(securityService.isCommandAllowed({ action: 'rm_rf', params: {} })).toBe(false);
       expect(securityService.isCommandAllowed({ action: 'execute_shell', params: {} })).toBe(false);
