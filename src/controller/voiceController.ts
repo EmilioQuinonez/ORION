@@ -42,7 +42,7 @@ async function processTranscript(transcript: string): Promise<ProcessResult> {
       responseText = await llmService.generateResponse(transcript, null, history);
       actionResult = null;
     } else {
-      responseText = await llmService.generateResponse(transcript, actionResult, history);
+      responseText = actionResult;
     }
   }
 

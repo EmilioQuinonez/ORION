@@ -16,8 +16,21 @@ describe('commandWhitelist', () => {
       expect(isAllowedAction('sudo_exec')).toBe(false);
     });
 
-    it('debe tener al menos 20 acciones permitidas', () => {
-      expect(ALLOWED_ACTIONS.size).toBeGreaterThanOrEqual(20);
+    it('debe tener al menos 27 acciones permitidas', () => {
+      expect(ALLOWED_ACTIONS.size).toBeGreaterThanOrEqual(27);
+    });
+  });
+
+  describe('acciones de música', () => {
+    it('debe permitir todas las acciones de control de música', () => {
+      expect(isAllowedAction('play_music')).toBe(true);
+      expect(isAllowedAction('stop_music')).toBe(true);
+      expect(isAllowedAction('get_current_track')).toBe(true);
+      expect(isAllowedAction('next_track')).toBe(true);
+      expect(isAllowedAction('previous_track')).toBe(true);
+      expect(isAllowedAction('play_song')).toBe(true);
+      expect(isAllowedAction('play_artist')).toBe(true);
+      expect(isAllowedAction('play_playlist')).toBe(true);
     });
   });
 
