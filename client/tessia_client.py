@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Orión — Cliente de voz con WebRTC VAD
-Di "Orión" para activar. El sistema detecta automáticamente cuándo empiezas
+Tessia — Cliente de voz con WebRTC VAD
+Di "Tessia" para activar. El sistema detecta automáticamente cuándo empiezas
 y terminas de hablar usando WebRTC VAD en lugar de umbral de amplitud.
 """
 
@@ -28,7 +28,7 @@ SetLogLevel(-1)
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 _env = dotenv_values(os.path.join(os.path.dirname(__file__), '..', '.env'))
-DEBUG = os.environ.get('ORION_DEBUG', '').lower() in ('1', 'true')
+DEBUG = os.environ.get('TESSIA_DEBUG', '').lower() in ('1', 'true')
 
 API_URL         = f"http://localhost:{_env.get('PORT', '3000')}/api"
 SAMPLE_RATE     = 16000
@@ -46,7 +46,7 @@ MAX_SECS        = float(_env.get('MAX_RECORD_SECS', '15.0'))
 CONV_TIMEOUT    = float(_env.get('CONVERSATION_TIMEOUT', '30.0'))
 PREROLL_SECS    = 0.4   # audio previo al inicio del habla para no perder fonemas iniciales
 
-WAKE_WORDS  = {'orión', 'orion', 'orin', 'orín', 'o rión', 'o rion', 'aurión', 'aurion', 'o rin'}
+WAKE_WORDS  = {'tessia', 'tesia', 'te sia', 'tecia', 'te ssia'}
 EXIT_WORDS  = {'bye', 'adiós', 'adios', 'hasta luego', 'salir', 'cerrar', 'chao'}
 
 ELEVENLABS_API_KEY  = _env.get('ELEVENLABS_API_KEY', '')
@@ -216,14 +216,14 @@ def record_with_vad(
 
 
 def drain_stream(stream: sd.RawInputStream, secs: float = 0.5) -> None:
-    """Descarta el audio acumulado mientras Orión estaba hablando."""
+    """Descarta el audio acumulado mientras Tessia estaba hablando."""
     n = int(secs * 1000 / FRAME_MS)
     for _ in range(n):
         stream.read(FRAME_SAMPLES)
 
 
 # ── API y síntesis ─────────────────────────────────────────────────────────────
-def send_to_orion(text: str) -> dict:
+def send_to_tessia(text: str) -> dict:
     r = requests.post(f"{API_URL}/voice/chat", json={'text': text}, timeout=180)
     r.raise_for_status()
     return r.json()['data']
@@ -283,8 +283,8 @@ def process_frames(frames: List[bytes]) -> Optional[str]:
             print('No se detectó voz\n')
             return None
         print(f'Tu: "{transcript}"')
-        result = send_to_orion(transcript)
-        print(f'Orion: "{result["response"]}"\n')
+        result = send_to_tessia(transcript)
+        print(f'Tessia: "{result["response"]}"\n')
         speak(result['response'])
         return transcript
     except requests.RequestException as e:
@@ -305,7 +305,7 @@ def main() -> None:
     print('Cargando modelo Vosk (vocabulario completo para mejor deteccion del wake word)...')
     vosk_model = Model(MODEL_DIR)
     # Sin gramática restringida: Vosk usa vocabulario completo.
-    # La gramática restringida ["orion", "[unk]"] causaba demasiados falsos negativos
+    # La gramática restringida ["tessia", "[unk]"] causaba demasiados falsos negativos
     # porque forzaba al modelo a encajar cualquier audio en sólo dos tokens.
     rec = KaldiRecognizer(vosk_model, SAMPLE_RATE)
 
@@ -328,7 +328,7 @@ def main() -> None:
     if _SOX_AVAILABLE:
         print('sox detectado — normalizacion de audio activa')
 
-    print(f'Orion listo — VAD modo {VAD_MODE} — di "Orion" para activar\n')
+    print(f'Tessia lista — VAD modo {VAD_MODE} — di "Tessia" para activar\n')
 
     with sd.RawInputStream(
         samplerate=SAMPLE_RATE,
@@ -387,7 +387,7 @@ def main() -> None:
                 frames = record_with_vad(stream, CONV_TIMEOUT, SIL_SECS, require_speech=True)
 
                 if frames is None:
-                    print('Di "Orion" para activar\n')
+                    print('Di "Tessia" para activar\n')
                     in_conversation = False
                     continue
 
@@ -407,4 +407,4 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print('\nCerrando Orion...')
+        print('\nCerrando Tessia...')
