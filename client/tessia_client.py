@@ -46,7 +46,7 @@ MAX_SECS        = float(_env.get('MAX_RECORD_SECS', '15.0'))
 CONV_TIMEOUT    = float(_env.get('CONVERSATION_TIMEOUT', '30.0'))
 PREROLL_SECS    = 0.4   # audio previo al inicio del habla para no perder fonemas iniciales
 
-WAKE_WORDS  = {'tessia', 'tesia', 'te sia', 'tecia', 'te ssia'}
+WAKE_WORDS  = {'tessia', 'tesia', 'te sia', 'tecia', 'te ssia', 'tres sia', 'decía', 'te decía'}
 EXIT_WORDS  = {'bye', 'adiós', 'adios', 'hasta luego', 'salir', 'cerrar', 'chao'}
 
 ELEVENLABS_API_KEY  = _env.get('ELEVENLABS_API_KEY', '')
@@ -370,6 +370,7 @@ def main() -> None:
 
             # ── Wake word detectado — grabar primer comando ────────────────────
             beep()
+            drain_stream(stream, secs=0.3)
             print('Habla...')
             frames = record_with_vad(stream, MAX_SECS, SIL_SECS, require_speech=True)
 
