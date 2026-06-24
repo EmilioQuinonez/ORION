@@ -65,7 +65,7 @@ export const llmService = {
         history: Array<{ role: "user" | "assistant"; content: string }> = [],
     ): Promise<string> {
         const userMessage = commandResult
-            ? `Acción completada: ${commandResult}`
+            ? `El usuario preguntó: "${transcript}". Dato obtenido del sistema: ${commandResult}. Interpreta este dato y responde de forma natural, sin repetirlo literalmente.`
             : transcript;
 
         return chat(
