@@ -170,3 +170,112 @@ describe('commandService — acciones de música', () => {
     });
   });
 });
+
+const makeWeatherJson = (overrides: {
+  temp?: string; feelsLike?: string; condition?: string;
+  rainChances?: number[]; city?: string; country?: string;
+  forecast?: Array<{ min: string; max: string; rainChances: number[]; condition: string }>;
+} = {}) => {
+  const hourly = (chances: number[], cond: string) =>
+    chances.map(r => ({ chanceofrain: String(r), weatherDesc: [{ value: cond }] }));
+
+  const forecastDays = overrides.forecast ?? [
+    { min: '15', max: '25', rainChances: overrides.rainChances ?? [10, 20], condition: overrides.condition ?? 'Sunny' },
+    { min: '14', max: '23', rainChances: [40, 60], condition: 'Rainy' },
+    { min: '13', max: '21', rainChances: [5, 10],  condition: 'Cloudy' },
+  ];
+
+  return JSON.stringify({
+    current_condition: [{
+      temp_C: overrides.temp ?? '21',
+      FeelsLikeC: overrides.feelsLike ?? '19',
+      weatherDesc: [{ value: overrides.condition ?? 'Partly cloudy' }],
+    }],
+    weather: forecastDays.map(d => ({
+      maxtempC: d.max,
+      mintempC: d.min,
+      hourly: hourly(d.rainChances, d.condition),
+    })),
+    nearest_area: [{
+      areaName: [{ value: overrides.city ?? 'Querétaro' }],
+      country: [{ value: overrides.country ?? 'Mexico' }],
+    }],
+  });
+};
+
+describe('commandService — clima', () => {
+  beforeEach(() => {
+    mockExecFile.mockReset();
+    mockExecFile.mockResolvedValue({ stdout: '', stderr: '' });
+  });
+
+  describe('get_weather', () => {
+    it('retorna clima actual con ubicación, condición, temperatura y lluvia', async () => {
+      queueStdout(makeWeatherJson({ temp: '22', feelsLike: '20', condition: 'Sunny', rainChances: [5, 10, 5, 5, 5, 5, 5, 5] }));
+      const result = await commandService.execute('get_weather', {});
+      expect(result).toContain('Querétaro, Mexico');
+      expect(result).toContain('Sunny');
+      expect(result).toContain('22°C');
+      expect(result).toContain('20°C');
+      expect(result).toContain('Probabilidad de lluvia hoy: 10%');
+    });
+
+    it('calcula la probabilidad de lluvia máxima del día', async () => {
+      queueStdout(makeWeatherJson({ rainChances: [10, 80, 30, 5, 5, 5, 5, 5] }));
+      const result = await commandService.execute('get_weather', {});
+      expect(result).toContain('Probabilidad de lluvia hoy: 80%');
+    });
+
+    it('acepta ciudad como parámetro', async () => {
+      queueStdout(makeWeatherJson({ city: 'Monterrey' }));
+      const result = await commandService.execute('get_weather', { city: 'Monterrey' });
+      expect(result).toContain('Monterrey');
+      const callArgs = mockExecFile.mock.calls[0] as unknown[][];
+      expect((callArgs[1] as string[]).join(' ')).toContain('Monterrey');
+    });
+
+    it('retorna error si curl falla', async () => {
+      mockExecFile.mockRejectedValueOnce(new Error('network error'));
+      await expect(commandService.execute('get_weather', {})).rejects.toThrow();
+    });
+  });
+
+  describe('get_forecast', () => {
+    it('retorna pronóstico de mañana por defecto', async () => {
+      queueStdout(makeWeatherJson());
+      const result = await commandService.execute('get_forecast', {});
+      expect(result).toContain('Mañana');
+      expect(result).toContain('14°C mín');
+      expect(result).toContain('23°C máx');
+      expect(result).toContain('Probabilidad de lluvia: 60%');
+    });
+
+    it('retorna pronóstico de hoy con day=hoy', async () => {
+      queueStdout(makeWeatherJson());
+      const result = await commandService.execute('get_forecast', { day: 'hoy' });
+      expect(result).toContain('Hoy');
+      expect(result).toContain('15°C mín');
+      expect(result).toContain('25°C máx');
+    });
+
+    it('retorna pronóstico de pasado mañana', async () => {
+      queueStdout(makeWeatherJson());
+      const result = await commandService.execute('get_forecast', { day: 'pasado mañana' });
+      expect(result).toContain('Pasado mañana');
+      expect(result).toContain('13°C mín');
+      expect(result).toContain('21°C máx');
+    });
+
+    it('incluye la ciudad en la respuesta', async () => {
+      queueStdout(makeWeatherJson({ city: 'Guadalajara' }));
+      const result = await commandService.execute('get_forecast', { day: 'mañana', city: 'Guadalajara' });
+      expect(result).toContain('Guadalajara');
+    });
+
+    it('incluye la condición del clima del día', async () => {
+      queueStdout(makeWeatherJson());
+      const result = await commandService.execute('get_forecast', { day: 'mañana' });
+      expect(result).toContain('Rainy');
+    });
+  });
+});
